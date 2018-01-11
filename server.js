@@ -4,7 +4,8 @@ const cors = require('cors')
 const fetchTags = require('./fetch-tags');
 const cache = require('apicache').middleware;
 
-const TRACKS_API_CALL_LIMIT=10000;
+const TRACKS_API_CALL_LIMIT = 10000;
+const PORT = process.env.PORT || 3001;
 
 const log = (...args) => console.log(...args);
 
@@ -32,4 +33,4 @@ app.use('/api', proxy({
   changeOrigin: true,
 }));
 
-app.listen(3001);
+app.listen(PORT);
