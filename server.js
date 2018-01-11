@@ -4,33 +4,35 @@ const cors = require('cors')
 const fetchTags = require('./fetch-tags');
 const cache = require('apicache').middleware;
 
-const config = require('./config');
 const TRACKS_API_CALL_LIMIT=10000;
 
-const app = express();
+const log = (...args) => console.log(...args);
 
+const app = express();
 app.use(cors());
 
-app.get('/shazams.json', cache('1 day'), (req, res) => {
+app.get('/shazams.json', cache('1 day'), async (req, res) => {
   var {fbEmail, fbPass} = req.query;
 
-  console.log({fbEmail, fbPass});
+  log('fetching tags');
 
   if (!fbEmail || !fbPass) {
-    res.status(400).send('Missing query params');
-    // fbEmail = config.fbEmail;
-    // fbPass = config.fbPass;
+    res.status(400).send('Required params: fbEmail, fbPass');
   }
 
-  fetchTags({
+  const tags = await fetchTags({
     fbEmail,
     fbPass,
     limit: TRACKS_API_CALL_LIMIT,
-  }).then((data) => {
-    res.send(data);
   });
+
+  log('tags fetched');
+  res.send(tags);
 });
 
-app.use('/api', proxy({target: 'https://cdn.shazam.com', changeOrigin: true}));
-app.listen(3001);
+app.use('/api', proxy({
+  target: 'https://cdn.shazam.com',
+  changeOrigin: true,
+}));
 
+app.listen(3001);
