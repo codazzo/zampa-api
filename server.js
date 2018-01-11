@@ -11,14 +11,11 @@ const log = (...args) => console.log(...args);
 const app = express();
 app.use(cors());
 
+const fbEmail = process.env.email;
+const fbPass = process.env.password;
+
 app.get('/shazams.json', cache('1 day'), async (req, res) => {
-  var {fbEmail, fbPass} = req.query;
-
   log('fetching tags');
-
-  if (!fbEmail || !fbPass) {
-    res.status(400).send('Required params: fbEmail, fbPass');
-  }
 
   const tags = await fetchTags({
     fbEmail,
