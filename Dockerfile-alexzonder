@@ -1,0 +1,8 @@
+FROM alekzonder/puppeteer:latest
+
+COPY . /app/
+#COPY local.conf /etc/fonts/local.conf
+WORKDIR app
+
+EXPOSE 3001
+CMD ["node", "server.js"]

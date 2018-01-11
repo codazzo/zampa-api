@@ -1,0 +1,9 @@
+version: '2'
+services:
+  zampa-api:
+    build: .
+    environment:
+      - FB_EMAIL
+      - FB_PASS
+    expose:
+    - 3001

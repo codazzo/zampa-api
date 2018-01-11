@@ -12,8 +12,10 @@ const log = (...args) => console.log(...args);
 const app = express();
 app.use(cors());
 
-const fbEmail = process.env.email;
-const fbPass = process.env.password;
+const fbEmail = process.env.FB_EMAIL;
+const fbPass = process.env.FB_PASS;
+
+console.log(`fbEmail: ${fbEmail}`);
 
 app.get('/shazams.json', cache('1 day'), async (req, res) => {
   log('fetching tags');
@@ -28,9 +30,18 @@ app.get('/shazams.json', cache('1 day'), async (req, res) => {
   res.send(tags);
 });
 
+
 app.use('/api', proxy({
   target: 'https://cdn.shazam.com',
   changeOrigin: true,
 }));
 
 app.listen(PORT);
+
+console.log('ready!');
+
+process.on('unhandledrejection', rejection => {
+  console.log('unhandled rejection caught');
+  console.log(Object.keys(rejection));
+  console.log(rejection);
+});
