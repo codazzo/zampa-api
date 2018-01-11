@@ -1,85 +1,97 @@
 const path = require('path');
-const Horseman = require('node-horseman');
+const puppeteer = require('puppeteer');
 const replaceXHR = require('./replace-xhr');
 
 const STORED_RESPONSE_VARIABLE_NAME = 'API_RESPONSE';
-const PEP_POLYFILL_PATH = path.join(__dirname, 'polyfills', 'pep.js');
-const horseman = new Horseman({
-  injectJquery: false,
-  timeout: 15000
-});
 
 const VIEWPORT_WIDTH = 1920;
 const VIEWPORT_HEIGHT = 1080;
 const TRACKS_API_CALL_REGEX = '\\?limit=\\d+';
 
-module.exports = function fetchTags({
-  limit,
+const SHAZAM_PAGE_URL = 'https://www.shazam.com/myshazam';
+const limit = 10000;
+const FB_BUTTON_CLICK_RETRY_INTERVAL_MS = 500;
+const INTERVAL_BEFORE_CLICKING_LOGIN_MS = 500;
+const DEBUG_XHR = false;
+
+const delay = intervalMs => new Promise(resolve => setTimeout(resolve, intervalMs));
+
+module.exports = async ({
+  limit = 10000,
   fbEmail,
-  fbPass
-}) {
-  return new Promise((resolve) => {
-    horseman
-      .on('consoleMessage', function(msg) {
-        console.log(`[console] ${msg}`);
-      })
-      .open('https://www.shazam.com/myshazam')
-      .injectJs(PEP_POLYFILL_PATH)
-      .viewport(VIEWPORT_WIDTH, VIEWPORT_HEIGHT)
-      .evaluate(replaceXHR, TRACKS_API_CALL_REGEX, `?limit=${limit}`, STORED_RESPONSE_VARIABLE_NAME)
-      .evaluate(function() {
-        var origOpen = window.open;
+  fbPass,
+  debug = false,
+}) => {
+  const log = (...args) => debug && console.log(...args);
 
-        console.info('monkey patching window.open');
+  const browser = await puppeteer.launch();
+  const page = (await browser.pages())[0];
 
-        window.open = function() {
-          console.log('window.open being called');
-          window.thePopup = origOpen.apply(this, arguments);
+  await page.goto(SHAZAM_PAGE_URL);
 
-          console.log(window.thePopup);
-          return window.thePopup;
-        }
-      })
-      .waitForSelector('.fblogin')
-      .then(function() {
-        console.log('Facebook Login Button available');
-      })
-      .evaluate(function() {
-        var button = document.querySelector('.fblogin');
-        var event = new PointerEvent('pointerup', {
-           'view': window,
-           'bubbles': true,
-           'cancelable': true
-         });
-        button.dispatchEvent(event);
-      })
-      .switchToTab(0)
-      .waitFor(function() {
-        return typeof window.thePopup !== 'undefined';
-      }, true)
-      .switchToTab(1)
-      .value('input[name=email]', fbEmail)
-      .value('input[name=pass]', fbPass)
-      .click('input[name=login]')
-      .then(function() {
-        console.log('Form filled');
-      })
-      .switchToTab(0)
-      .waitFor(function() {
-        return window.thePopup.closed;
-      }, true)
-      .waitFor(function(varName) {
-        return typeof window[varName] !== 'undefined';
-      }, STORED_RESPONSE_VARIABLE_NAME, true)
-      .evaluate(function(varName) {
-        return window[varName];
-      }, STORED_RESPONSE_VARIABLE_NAME)
-      .then(function(data){
-          console.log('Data received.');
-          const parsedData = JSON.parse(data);
-          console.log(parsedData.tags.length);
-          resolve(parsedData);
-      })
-      .close();
+  page.setViewport({
+    width: VIEWPORT_WIDTH,
+    height: VIEWPORT_HEIGHT,
   });
-}
+
+  await page.evaluate(replaceXHR, TRACKS_API_CALL_REGEX, `?limit=${limit}`, STORED_RESPONSE_VARIABLE_NAME, DEBUG_XHR)
+  log('XHR replaced');
+
+  await page.evaluate(function() {
+    const origOpen = window.open;
+    window.open = function() {
+      window.thePopup = origOpen.apply(this, arguments);
+      return window.thePopup;
+    }
+  });
+  log('window.open monkey-patched');
+
+  await page.waitFor('.fblogin');
+  log('login button available');
+
+  await page.evaluate((intervalMs) => {
+    const delay = intervalMs => new Promise(resolve => setTimeout(resolve, intervalMs));
+
+    const dispatchClick = () => {
+      const button = document.querySelector('.fblogin');
+      const event = new PointerEvent('pointerup', {
+         'view': window,
+         'bubbles': true,
+         'cancelable': true
+       });
+      button.dispatchEvent(event);
+    };
+
+    return (async () => {
+      while (!window.thePopup) {
+        await delay(intervalMs);
+        dispatchClick();
+      }
+    })();
+  }, FB_BUTTON_CLICK_RETRY_INTERVAL_MS);
+
+  log('login button clicked');
+
+  await (async () => {
+    while ((await browser.pages()).length < 2) {
+      log('waiting for popup page to be available')
+      await delay(200);
+    }
+  })();
+
+  const popupPage = (await browser.pages())[1];
+
+  await popupPage.waitFor('input[name=email]');
+  await popupPage.type('input[name=email]', fbEmail);
+  await popupPage.type('input[name=pass]', fbPass);
+
+  await delay(INTERVAL_BEFORE_CLICKING_LOGIN_MS);
+  await popupPage.click('input[name=login]');
+
+  await page.waitForFunction((varName) => window[varName], {}, STORED_RESPONSE_VARIABLE_NAME);
+
+  const parsedData = await page.evaluate((varName) => JSON.parse(window[varName]), STORED_RESPONSE_VARIABLE_NAME);
+  log(`data received. ${parsedData.tags.length} tracks.`);
+
+  return parsedData;
+};
