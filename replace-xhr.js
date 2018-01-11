@@ -1,12 +1,12 @@
 // adapted from http://stackoverflow.com/a/24561614
-module.exports = function replaceXHR(argRegexString, argReplacement, varName){
+module.exports = function replaceXHR(argRegexString, argReplacement, varName, debug){
   var argRegex;
 
   if (argRegexString) {
     argRegex = new RegExp(argRegexString);
   }
 
-  (function(window, debug){
+  (function(window){
     console.log('monkey patching XHR');
 
     function prettyPrintArgs(args){
@@ -48,7 +48,6 @@ module.exports = function replaceXHR(argRegexString, argReplacement, varName){
         if (method === "open") {
           var url = args[1];
           if (argRegex && argRegex.test(url)) {
-            console.log('it\'s a match');
             var newArg = url.replace(argRegex, argReplacement);
             args.splice(1, 1, newArg);
             console.log("NEW ARGUMENTS", method, args);
@@ -120,5 +119,5 @@ module.exports = function replaceXHR(argRegexString, argReplacement, varName){
     });
 
     console.log('monkey patched XHR');
-  })(window, false);
+  })(window);
 }
