@@ -84,14 +84,20 @@ module.exports = async ({
     }
   })();
 
+  log('popup available');
+
   const popupPage = (await browser.pages())[1];
 
   await popupPage.waitFor('input[name=email]');
   await popupPage.type('input[name=email]', fbEmail);
   await popupPage.type('input[name=pass]', fbPass);
 
+  log('data filled');
+
   await delay(INTERVAL_BEFORE_CLICKING_LOGIN_MS);
   await popupPage.click('input[name=login]');
+
+  log('clicked login');
 
   await page.waitForFunction((varName) => window[varName], {}, STORED_RESPONSE_VARIABLE_NAME);
 

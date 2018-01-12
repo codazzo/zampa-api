@@ -72,7 +72,8 @@ module.exports = function replaceXHR(argRegexString, argReplacement, varName, de
           // request is fully loaded
           if (that.readyState == 4) {
             if (debug) {
-              console.log("RESPONSE RECEIVED:", typeof that.responseText == "string" ? that.responseText : "none");
+              console.log('GOT THE MATCH');
+              // console.log("RESPONSE RECEIVED:", typeof that.responseText == "string" ? that.responseText : "none");
             }
             // there is a response and filter execution based on url
             if (that.responseText && argRegex.test(realThis._url)) {

@@ -1,9 +1,0 @@
-version: '2'
-services:
-  zampa-api:
-    ports:
-    - "3001:3001"
-    volumes:
-    - ./:/app
-    # - /app/node_modules
-    command: /bin/bash -c "npm install && node_modules/nodemon/bin/nodemon.js -L -P 2000 server.js"

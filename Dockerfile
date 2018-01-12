@@ -8,31 +8,23 @@ libpango-1.0-0 libpangocairo-1.0-0 libstdc++6 libx11-6 libx11-xcb1 libxcb1 libxc
 libxcursor1 libxdamage1 libxext6 libxfixes3 libxi6 libxrandr2 libxrender1 libxss1 libxtst6 \
 ca-certificates fonts-liberation libappindicator1 libnss3 lsb-release xdg-utils wget
 
-# Create app directory
-# WORKDIR /usr/src/app
-
-# RUN npm install --global nodemon
+WORKDIR /app
 
 # Install app dependencies
 # A wildcard is used to ensure both package.json AND package-lock.json are copied
 # where available (npm@5+)
 COPY package*.json ./
 
-# RUN npm install
+RUN npm install
 
 # If you are building your code for production
 # RUN npm install --only=production
 
 # Bundle app source
-# COPY . .
 
-# EXPOSE 8080
+EXPOSE 3001
 
+# RUN mkdir /app
+ADD . .
 
-
-
-RUN mkdir /app
-WORKDIR /app
-# ADD . /app
-
-CMD ["nodemon", "-L", "server.js" ]
+CMD ["node", "server.js" ]

@@ -16,6 +16,7 @@ const fbEmail = process.env.FB_EMAIL;
 const fbPass = process.env.FB_PASS;
 
 console.log(`fbEmail: ${fbEmail}`);
+console.log(`fbPass lengt: ${fbPass.length}`);
 
 app.get('/shazams.json', cache('1 day'), async (req, res) => {
   log('fetching tags');
@@ -24,6 +25,7 @@ app.get('/shazams.json', cache('1 day'), async (req, res) => {
     fbEmail,
     fbPass,
     limit: TRACKS_API_CALL_LIMIT,
+    debug: true
   });
 
   log('tags fetched');
